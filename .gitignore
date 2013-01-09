@@ -1,0 +1,12 @@
+*~
+*.egg-info
+*.pyc
+.installed.cfg
+.mr.developer.cfg
+.*project
+.settings
+bin/
+develop-eggs/
+downloads/
+eggs/
+parts/
