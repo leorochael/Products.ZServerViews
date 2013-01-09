@@ -25,7 +25,7 @@ thread
 setup(name='Products.ZServerViews',
       version=version,
       description=description,
-      long_description=open("README.txt").read() + "\n" +
+      long_description=open("README.rst").read() + "\n" +
                        open(os.path.join("docs", "HISTORY.txt")).read(),
       classifiers=[
         "Programming Language :: Python",
