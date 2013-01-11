@@ -48,10 +48,14 @@ class ZServerViewHandler(zhttp_handler):
         self.config = config
 
     def match(self, request):
-        # NOTE: request.split_url() is more like urlparse than urlsplit
-        # so we don't use it here, but we don't need the full urlsplilt
-        # functionality either
-        path, _ = request.uri.split('?', 1)
+        # NOTE: request.split_url() is more like the deprecated urlparse than
+        # urlsplit so we don't use it here
+        uri = request.uri
+        return self._match_uri(uri)
+
+    def _match_uri(self, uri):
+        # We don't need the full urlsplit functionality
+        path = uri.split('?', 1)[0]
         return path in self.config
 
     def get_view(self, env):
