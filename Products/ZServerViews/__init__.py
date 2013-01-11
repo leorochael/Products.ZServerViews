@@ -51,4 +51,3 @@ def get_class_dotted_name(instance):
 def get_server_to_graft_list(zope_conf):
     return [server for server in zope_conf.servers
             if get_class_dotted_name(server) in GRAFT_SERVER_CLASS_SET]
-
