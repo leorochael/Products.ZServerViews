@@ -89,6 +89,18 @@ class ZServerViewHandler(zhttp_handler):
             # mini WSGI server:
             result = view(env, channel_pipe.start_response)
             for part in result:
+                # XXX: This needs improvement. Basically, we block ZServer
+                # iterating through the answer. If it's long, The ZServer will
+                # block while the channel gobbles up all the result in memory.
+                # Only after all the result has been absorbed will we return
+                # control to the medusa thread to actually serve the view.
+                # Instead, we should channel.push() a producer for the answer
+                # that iterates the result whenever the medusa thread is ready
+                # to push more content.
+                #
+                # For short content, like debug views, this is ok, but if a
+                # view tried, for example, to stream a huge file, this would
+                # be bad.
                 channel_pipe.write(part)
             channel_pipe.close()
             request.channel.current_request=None
