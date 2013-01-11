@@ -45,6 +45,9 @@ class ZServerViewHandler(zhttp_handler):
 
     def __init__(self, config):
         zhttp_handler.__init__(self, __name__, uri_base='/')
+        self.update_configuration(config)
+
+    def update_configuration(self, config):
         self.config = config
 
     def match(self, request):

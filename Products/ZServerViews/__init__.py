@@ -18,23 +18,54 @@ ZServer.HTTPServer.zhttp_server
 # In any case, it can be safely updated by other modules at import time, since
 # it's only used at "Product initialization" time.
 
+CONFIG_KEY = 'zserver-views'
+
+_zserver_view_handler = None
+
 def initialize(context):
     from App.config import getConfiguration
     zope_conf = getConfiguration()
-    install_handler(zope_conf)
+    configure_server_handler(zope_conf)
 
-def install_handler(zope_conf):
+def remove_handler(server_list):
+    global _zserver_view_handler
+    if _zserver_view_handler is not None:
+        for server in server_list:
+            server.remove_handler(_zserver_view_handler)
+    _zserver_view_handler = None
+
+def add_handler(handler, server_list):
+    global _zserver_view_handler
+    _zserver_view_handler = handler
+    for server in server_list:
+        server.install_handler(_zserver_view_handler)
+
+def configure_server_handler(zope_conf):
     from Products.ZServerViews.handler import ZServerViewHandler
     product_config = get_product_config(zope_conf)
     server_list = get_server_to_graft_list(zope_conf)
-    if product_config and server_list:
+    if not server_list:
+        return
+    if product_config:
         handler_config = get_handler_configuration(product_config)
-        handler = ZServerViewHandler(handler_config)
-        for server in server_list:
-            server.install_handler(handler)
+        if _zserver_view_handler is None:
+            handler = ZServerViewHandler(handler_config)
+            add_handler(handler, server_list)
+        else:
+            _zserver_view_handler.update_configuration(handler_config)
+    else:
+        # configuration is empty, remove handler
+        remove_handler(server_list)
 
 def get_product_config(zope_conf):
-    return getattr(zope_conf, 'product_config', {}).get('zserver-views')
+    return zope_conf.product_config.get(CONFIG_KEY)
+
+def update_configuration(new_conf):
+    from App.config import getConfiguration
+    zope_conf = getConfiguration()
+    product_config = zope_conf.product_config.setdefault(CONFIG_KEY, {})
+    product_config.update(new_conf)
+    configure_server_handler(zope_conf)
 
 def get_handler_configuration(product_config):
     from Zope2.Startup.datatypes import importable_name

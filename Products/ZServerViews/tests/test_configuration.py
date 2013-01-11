@@ -28,6 +28,7 @@ class ZopeStarterTestCase(test_logger.LoggingTestBase):
 
     schema = None
     TEMPNAME = None
+    zope_conf = None
 
     def setUp(self):
         test_logger.LoggingTestBase.setUp(self)
@@ -39,6 +40,8 @@ class ZopeStarterTestCase(test_logger.LoggingTestBase):
     def tearDown(self):
         rmtree(self.TEMPNAME)
         test_logger.LoggingTestBase.tearDown(self)
+        if self.zope_conf is not None:
+            del self.zope_conf.servers # should release servers
 
     def load_config_text(self, text):
         # We have to create a directory of our own since the existence
@@ -57,13 +60,24 @@ class ZopeStarterTestCase(test_logger.LoggingTestBase):
         starter.setConfiguration(conf)
         return starter
 
+    def load_config_text_and_start_servers(self, zope_conf_text):
+        from App.config import setConfiguration
+        self.zope_conf = self.load_config_text(zope_conf_text)
+        starter = self.get_starter(self.zope_conf)
+        setConfiguration(self.zope_conf)
+    # do the job the 'handler' would have done (call prepare)
+        for server in self.zope_conf.servers:
+            server.prepare('', None, 'Zope2', {}, None)
+        
+        starter.setupServers()
+        return self.zope_conf
+
     def test_zserver_views_configuration(self):
         from ZServer.HTTPServer import zhttp_handler
         from Products.ZServerViews.handler import ZServerViewHandler
         from Products.ZServerViews.tests.common import current_thread_id_zserver_view
-        from App.config import setConfiguration
         import Products.ZServerViews
-        conf = self.load_config_text("""
+        zope_conf_text = """
             instancehome <<INSTANCE_HOME>>
             <http-server>
                 address 18092
@@ -76,40 +90,64 @@ class ZopeStarterTestCase(test_logger.LoggingTestBase):
             <product-config zserver-views>
                 id-view /foo Products.ZServerViews.tests.common.current_thread_id_zserver_view
             </product-config>
-        """)
-        starter = self.get_starter(conf)
-        setConfiguration(conf)
-        # do the job the 'handler' would have done (call prepare)
-        for server in conf.servers:
-            server.prepare('', None, 'Zope2', {}, None)
-        try:
-            starter.setupServers()
-            import ZServer
-            # We should have two configured servers:
-            zhttp_server, zftp_server = conf.servers
-            self.assertEqual(zhttp_server.__class__,
-                             ZServer.HTTPServer.zhttp_server)
-            self.assertEqual(zftp_server.__class__,
-                             ZServer.FTPServer)
-            # At this point, Only the standard zhttp_handler should be present
-            # in the HTTP server:
-            self.assertEqual(
-                [handler.__class__ for handler in zhttp_server.handlers],
-                [zhttp_handler],)
-            # Now we call the product initialization for Products.ZServerViews.
-            # We don't need to pass a real context.
-            Products.ZServerViews.initialize(None)
-            # This configures the extra handler into the http_server,
-            # inserting it first.
-            self.assertEqual(
-                [handler.__class__ for handler in zhttp_server.handlers],
-                [ZServerViewHandler, zhttp_handler],)
-            # Our installed handler should have the configuration we passed:
-            handler, _ = zhttp_server.handlers
-            env = dict(PATH_INFO='/foo', SCRIPT_NAME='')
-            view = handler.get_view(env)
-            self.assertEqual(view, current_thread_id_zserver_view)
-            self.assertEqual(env, dict(PATH_INFO='', SCRIPT_NAME='/foo'))
-        finally:
-            del conf.servers # should release servers
-            pass
+        """
+        conf = self.load_config_text_and_start_servers(zope_conf_text)
+        import ZServer
+        # We should have two configured servers:
+        zhttp_server, zftp_server = conf.servers
+        self.assertEqual(zhttp_server.__class__,
+                         ZServer.HTTPServer.zhttp_server)
+        self.assertEqual(zftp_server.__class__,
+                         ZServer.FTPServer)
+        # At this point, Only the standard zhttp_handler should be present
+        # in the HTTP server:
+        self.assertEqual([handler.__class__ for handler in zhttp_server.handlers],
+                         [zhttp_handler])
+        original_handler, = zhttp_server.handlers
+        # Now we call the product initialization for Products.ZServerViews.
+        # We don't need to pass a real context.
+        Products.ZServerViews.initialize(None)
+        # This configures the extra handler into the http_server,
+        # inserting it first.
+        self.assertEqual(
+            [handler.__class__ for handler in zhttp_server.handlers],
+            [ZServerViewHandler, zhttp_handler],)
+        self.assertEqual(zhttp_server.handlers[-1], original_handler,)
+        # Our installed handler should have the configuration we passed:
+        zserver_handlers = zhttp_server.handlers
+        handler, _ = zserver_handlers
+        self.assertTrue(handler._match_uri('/foo'))
+        env = dict(PATH_INFO='/foo', SCRIPT_NAME='')
+        view = handler.get_view(env)
+        self.assertEqual(view, current_thread_id_zserver_view)
+        self.assertEqual(env, dict(PATH_INFO='', SCRIPT_NAME='/foo'))
+        self.assertFalse(handler._match_uri('/bar'))
+        self.assertFalse(handler._match_uri('/'))
+        # The configuration should be idempotent. I.e. calling it again
+        # should result in the same state.
+        Products.ZServerViews.initialize(None)
+        self.assertEqual(zserver_handlers, zhttp_server.handlers)
+        # Emptying the configuration should remove our special handler
+        del conf.product_config['zserver-views']
+        Products.ZServerViews.initialize(None)
+        self.assertEqual([original_handler], zhttp_server.handlers)
+        # And there's an API for other products to insert their own keys
+        # into our configuration
+        Products.ZServerViews.update_configuration(
+            {'id-view-2': '/bar Products.ZServerViews.tests.common.current_thread_id_zserver_view'})
+        env = dict(PATH_INFO='/bar', SCRIPT_NAME='')
+        handler = zhttp_server.handlers[0]
+        view = handler.get_view(env)
+        self.assertEqual(view, current_thread_id_zserver_view)
+        self.assertEqual(env, dict(PATH_INFO='', SCRIPT_NAME='/bar'))
+        # the old url for the view no longer works because we had cleared it
+        # earlier.
+        self.assertTrue(handler._match_uri('/bar'))
+        self.assertFalse(handler._match_uri('/foo'))
+        # But the update is additive:
+        Products.ZServerViews.update_configuration(
+            {'id-view-3': '/foo Products.ZServerViews.tests.common.current_thread_id_zserver_view'})
+        handler = zhttp_server.handlers[0]
+        self.assertTrue(handler._match_uri('/bar'))
+        self.assertTrue(handler._match_uri('/foo'))
+        self.assertFalse(handler._match_uri('/baz'))
