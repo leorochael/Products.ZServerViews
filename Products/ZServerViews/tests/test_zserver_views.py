@@ -96,8 +96,8 @@ class TestZServerViews(unittest.TestCase):
     port = int(os.environ.get('ZSERVER_PORT', 55001))
 
     def setUp(self):
-        self.base_url = 'http://%s:%s/' % (self.host, self.port)
         patch_ZServerPublisher()
+        self.base_url = 'http://%s:%s/' % (self.host, self.port)
         #self.dthread = DumperThread() # XXX: remove
         self.setUpZServerThread()
 
