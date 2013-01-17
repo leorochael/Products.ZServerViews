@@ -12,16 +12,14 @@
 ##############################################################################
 
 import thread
+from Products.ZServerViews.base import TextView
 
 def current_thread_id():
     return str(thread.get_ident())
 
-def current_thread_id_zserver_view(env, start_response):
-    result = current_thread_id()
-    length = str(len(result))
-    start_response('200 OK', [('Content-Type', 'text/plain'),
-                              ('Content-Length', length),],)
-    return [result]
+@TextView
+def current_thread_id_zserver_view(environment):
+    return current_thread_id()
 
 class App(object):
     "A publishable app"
