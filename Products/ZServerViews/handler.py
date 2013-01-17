@@ -85,7 +85,7 @@ class ZServerViewHandler(zhttp_handler):
             s=0
         DebugLogger.log('I', id(request), s)
         env=self.get_environment(request)
-        path, _ = request.uri.split('?', 1)
+        path = request.uri.split('?', 1)[0]
         env['PATH_INFO'] += path
         # why not do the above in self.get_environment(request)?
         env['stdin'] = sin
