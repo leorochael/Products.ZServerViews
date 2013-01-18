@@ -19,7 +19,7 @@ ZServer Views are mostly useful for system monitoring tools, like
 Installation
 ============
 
-Add "Products.ZServerViews" to the list of eggs of the part that defines your
+Add `Products.ZServerViews` to the list of eggs of the part that defines your
 Zope instance.
 
 Configuration
@@ -61,16 +61,23 @@ substring matching.
 Writing ZServer Views
 =====================
 
-TBD
-
-(ZServer Views are WSGI apps, which mean they must take an `env`(ironment)
-parameter and a `start_response` parameter, and return the bytes that must be
+ZServer Views are mini WSGI apps, which mean they take an `env` and a
+`start_response` parameter, and return the bytes that must be
 sent to the browser. The query string, if any, will be passed into
 `env['QUERY_STRING']`.
 
 For HTTP/1.1 compatibility they must either pass a "Content-Lenght" header into
 `start_response()` or a "Transfer-Encoding=chunked" header and chunk the
 content. If neither is done, the response will fall back to `HTTP/1.0`
-automatically, and the connection will be forced close.)
+automatically, and the connection will be forced close.
+
+To ease the creation of these mini apps, a decorator exists
+(`Products.ZServerViews.base import TextView`) that can wrap
+a function receiving only the `env` parameter and returns a single `unicode`
+string. This decorator will take care of all the WSGI conversation around that
+response.
+
+Check `Products.ZServerViews.tests.common.current_thread_id_zserver_view` for
+an example.
 
 .. _WSGI: http://wsgi.org/
