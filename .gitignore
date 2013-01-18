@@ -10,3 +10,4 @@ develop-eggs/
 downloads/
 eggs/
 parts/
+dist/
