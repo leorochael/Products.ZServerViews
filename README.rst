@@ -36,11 +36,11 @@ whitespace. For example::
 
   <product-config zserver-views>
       my-package /my/view my.package.mymodule.my_view
-      thread-id Products.ZServerViews.tests.common.current_thread_id_zserver_view /thrid
+      thread-id /thr-id Products.ZServerViews.tests.common.current_thread_id_zserver_view
   </environment>
 
 This means that the `http://yourserver/my/view` URL will run the WSGI app at
-`my.package.mymodule.my_view` and the url at `http://yourserver/thrid` will
+`my.package.mymodule.my_view` and the url at `http://yourserver/thr-id` will
 run the `Products.ZServerViews.tests.common.current_thread_id_zserver_view`
 WSGI view.
 
