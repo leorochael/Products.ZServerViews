@@ -4,7 +4,7 @@ Changelog
 0.1.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Include .rst files in the manifest
 
 
 0.1.0 (2013-01-18)
