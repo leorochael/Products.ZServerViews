@@ -10,10 +10,19 @@
 # FOR A PARTICULAR PURPOSE
 #
 ##############################################################################
+import sys
 
 '''
 Base classes for ZServer Views
 '''
+
+class ViewError(Exception):
+
+    def __init__(self, status, headers=(), message=u''):
+        self.status = status
+        self.headers = headers
+        self.message = message
+        super(ViewError, self).__init__(status + '\n'+ message)
 
 class TextView(object):
     """Decorator for a ZServer view callable to render a small text snippet
@@ -26,8 +35,21 @@ class TextView(object):
         self.func = func
 
     def __call__(self, environment, start_response):
-        result = self.func(environment).encode('utf-8')
+        headers = [('Content-Type', 'text/plain; charset=utf-8'),]
+        try:
+            result = self.func(environment)
+        except ViewError:
+            # python 3 compat: get exception from sys.exc_info()
+            # instead of directly
+            _c, error, _tb = sys.exc_info()
+            status = error.status
+            headers.extend(error.headers)
+            result = error.message
+            del _c, error, _tb
+        else:
+            status = '200 OK'
+        result = result.encode('utf-8')
         length = str(len(result))
-        start_response('200 OK', [('Content-Type', 'text/plain; charset=utf-8'),
-                                  ('Content-Length', length),],)
+        headers.append(('Content-Length', length))
+        start_response(status, headers)
         return [result]
