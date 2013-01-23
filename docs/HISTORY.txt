@@ -1,16 +1,20 @@
 Changelog
 =========
 
-0.1.2 (unreleased)
+0.2.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Make the message of ViewError a mandatory parameter. It can be empty but lots
+  of HTTP error codes require a body in the response, so an empty body is no
+  longer the default [leorochael]
 
+- Add a modicum of Python 2.4/Zope 2.10 compatibility (Exceptions are not
+  new-style classes) [leorochael]
 
 0.1.1 (2013-01-18)
 ------------------
 
-- Include .rst files in the manifest
+- Include .rst files in the manifest [leorochael]
 
 
 0.1.0 (2013-01-18)

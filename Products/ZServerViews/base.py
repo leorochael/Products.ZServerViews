@@ -18,11 +18,11 @@ Base classes for ZServer Views
 
 class ViewError(Exception):
 
-    def __init__(self, status, headers=(), message=u''):
+    def __init__(self, status, message, headers=()):
         self.status = status
         self.headers = headers
-        self.message = message
-        super(ViewError, self).__init__(status + '\n'+ message)
+        self.message = message or u''
+        Exception.__init__(self, status + '\n'+ message)
 
 class TextView(object):
     """Decorator for a ZServer view callable to render a small text snippet
