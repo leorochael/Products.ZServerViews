@@ -1,7 +1,7 @@
 Changelog
 =========
 
-0.2.0 (unreleased)
+0.2.0 (2013-01-24)
 ------------------
 
 - Make the message of ViewError a mandatory parameter. It can be empty but lots
